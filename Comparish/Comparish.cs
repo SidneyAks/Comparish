@@ -25,7 +25,7 @@ namespace Comparish
 
     public static class Meaning
     {
-        public static bool MeaninglyEquals<T1,T2>(this T1 item1, T2 item2, object DataMeaning, bool requireMatchingTypes = false, bool BSubSetsA = false)
+        public static bool MeaninglyEquals<T1,T2>(this T1 item1, T2 item2, object DataMeaning, bool requireMatchingTypes = false, bool BSubSetsA = false, bool AllowVacuouslyComparison = false)
         {
             if (requireMatchingTypes && item1.GetType() != item2.GetType())
             {
@@ -42,23 +42,32 @@ namespace Comparish
                 return attr?.meaning.GetType() == DataMeaning?.GetType() && (attr?.meaning.Equals(DataMeaning) ?? DataMeaning == null);
             }).OrderBy(x => x.Name);
 
+            if (!AllowVacuouslyComparison)
+            {
+                var item1err = item1Props.Count() > 0 ? null : Environment.NewLine + $"Type {item1.GetType().Name} has no {DataMeaning} meaning fields";
+                var item2err = item2Props.Count() > 0 ? null : Environment.NewLine + $"Type {item2.GetType().Name} has no {DataMeaning} meaning fields";
+
+                if (!string.IsNullOrEmpty(item1err) || !string.IsNullOrEmpty(item2err))
+                    throw new IncompatibleMeaningException($"Cannot meaningfully compare {item1.GetType().Name} to {item2.GetType().Name} by {DataMeaning} meaing." + item1err + item2err);
+            }
+
             using (var enum1 = item1Props.GetEnumerator())
             using (var enum2 = item2Props.GetEnumerator())
             {
-                var enum1HasMore = enum1.MoveNext();
-                var enum2HasMore = enum2.MoveNext();
-                do
+                var enum1HasMore = true;//enum1.MoveNext();
+                var enum2HasMore = true;//enum2.MoveNext();
+                while((enum1HasMore = enum1.MoveNext()) & (enum2HasMore = enum2.MoveNext()))
                 {
                     if (enum1.Current.Name != enum2.Current.Name ||
                         enum1.Current.PropertyType != enum2.Current.PropertyType)
                     {
                         break;
                     }
-                } while ((enum1HasMore = enum1.MoveNext()) & (enum2HasMore = enum2.MoveNext()));
+                } //while ((enum1HasMore = enum1.MoveNext()) & (enum2HasMore = enum2.MoveNext()));
 
                 if (enum2HasMore || (!BSubSetsA && enum1HasMore))
                 {
-                    throw new IncompatibleMeaningException($"Cannot meaningfully compare {item1.GetType().Name} to {item2.GetType().Name} by {DataMeaning} meaing." + Environment.NewLine +
+                    throw new IncompatibleMeaningException($"Cannot meaningfully compare {item1.GetType().Name} to {item2.GetType().Name} by {DataMeaning} meaning." + Environment.NewLine +
                         $"Type {item1.GetType().Name} and {item2.GetType().Name} do not share meaningful property sets." + Environment.NewLine +
                         $"Type {item1.GetType().Name} has {String.Join(",", item1Props.Select(x => x.Name))}" + Environment.NewLine +
                         $"Type {item2.GetType().Name} has {String.Join(",", item2Props.Select(x => x.Name))}");

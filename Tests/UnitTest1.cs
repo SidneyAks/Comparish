@@ -186,10 +186,31 @@ namespace Tests
             Assert.IsTrue(Meaning.MeaninglyEquals(objA, objB, DataDescriptors.Semantic));
             Assert.IsTrue(Meaning.MeaninglyEquals(objB, objA, DataDescriptors.Semantic));
 
-            //Assert that semantic data fields from incompatible types results in exception
+            //Assert that semantic data fields allow subsetting, but not supersetting
             Assert.IsTrue(Meaning.MeaninglyEquals(objA, objC, DataDescriptors.Semantic, BSubSetsA: true));
             Assert.ThrowsException<IncompatibleMeaningException>(() => Meaning.MeaninglyEquals(objC, objA, DataDescriptors.Semantic, BSubSetsA: true));
 
+        }
+
+        [TestMethod]
+        public void TestForVacuousComparison()
+        {
+            var objA = new TestingObjectA
+            {
+                MetadataA = Guid.NewGuid().ToString(),
+                MetadataB = Guid.NewGuid().ToString(),
+                SemanticDataA = "Foo",
+                SemanticDataB = "Bar",
+                NullDataA = "Fooz",
+                NullDataB = "Barz",
+            };
+
+            //Assert that vacuous comparison is equal when allowed
+            Assert.IsTrue(Meaning.MeaninglyEquals(objA, objA, "foo", AllowVacuouslyComparison: true));
+            Assert.IsTrue(Meaning.MeaninglyEquals(objA, objA, "foo", AllowVacuouslyComparison: true));
+
+            //Assert that vacuous comparison throws exception when not allowed
+            Assert.ThrowsException<IncompatibleMeaningException>(() => Meaning.MeaninglyEquals(objA, objA, "foo"));
         }
     }
 }
