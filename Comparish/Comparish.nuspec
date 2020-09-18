@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package >
+  <metadata>
+    <id>$id$</id>
+    <version>$version$</version>
+    <title>$title$</title>
+    <authors>Sidney Akers</authors>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <description>A utility for comparing objects by specific fields</description>
+    <releaseNotes>Initial release -- utility to compare objects by specific fields</releaseNotes>
+    <copyright>$copyright$</copyright>
+    <tags>Comparison Testing</tags>
+  </metadata>
+</package>
