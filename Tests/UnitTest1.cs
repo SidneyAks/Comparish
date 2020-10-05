@@ -1,9 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
 using Comparish;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Tests
 {
+    public enum DataDescriptors
+    {
+        Metadata,
+        Semantic
+    }
+
+
     public class TestingObjectA
     {
         [DataDescriptor(DataDescriptors.Metadata)]
@@ -33,11 +41,22 @@ namespace Tests
         [DataDescriptor(DataDescriptors.Semantic)]
         public string SemanticDataB { get; set; }
     }
+    
     public class TestingObjectC
     {
         [DataDescriptor(DataDescriptors.Semantic)]
         public string SemanticDataA { get; set; }
     }
+
+    public class TestingObjectD
+    {
+        [DataDescriptor(DataDescriptors.Metadata)]
+        public string MetadataA { get; set; }
+
+        [DataDescriptor(DataDescriptors.Semantic)]
+        public TestingObjectA[] list { get; set; }
+    }
+
 
 
     [TestClass]
@@ -211,6 +230,69 @@ namespace Tests
 
             //Assert that vacuous comparison throws exception when not allowed
             Assert.ThrowsException<IncompatibleMeaningException>(() => Meaning.MeaninglyEquals(objA, objA, "foo"));
+        }
+
+        [TestMethod]
+        public void TestForListularDataTypeEquality()
+        {
+            {
+
+                var objA = new TestingObjectD()
+                {
+                    MetadataA = Guid.NewGuid().ToString(),
+                    list = new TestingObjectA[]
+                    {
+                        new TestingObjectA()
+                        {
+                            MetadataA = Guid.NewGuid().ToString(),
+                            MetadataB = Guid.NewGuid().ToString(),
+                            SemanticDataA = "Foo",
+                            SemanticDataB = "Bar",
+                        } 
+                    }
+                };
+
+                var objB = new TestingObjectD()
+                {
+                    MetadataA = Guid.NewGuid().ToString(),
+                    list = new TestingObjectA[]
+                    {
+                        new TestingObjectA()
+                        {
+                            MetadataA = Guid.NewGuid().ToString(),
+                            MetadataB = Guid.NewGuid().ToString(),
+                            SemanticDataA = "Foo",
+                            SemanticDataB = "Bar",
+                        }
+                    }
+                };
+
+                var objC = new TestingObjectD()
+                {
+                    MetadataA = Guid.NewGuid().ToString(),
+                    list = new TestingObjectA[]
+                    {
+                        new TestingObjectA()
+                        {
+                            MetadataA = Guid.NewGuid().ToString(),
+                            MetadataB = Guid.NewGuid().ToString(),
+                            SemanticDataA = "Foo!",
+                            SemanticDataB = "Bar!",
+                        }
+                    }
+                };
+
+                //Assert that Metadata fields (random guid values) are not equal
+                Assert.IsFalse(Meaning.MeaninglyEquals(objA, objB, DataDescriptors.Metadata));
+                Assert.IsFalse(Meaning.MeaninglyEquals(objB, objA, DataDescriptors.Metadata));
+
+                //Assert that SemanticData fields (specific values) are equal
+                Assert.IsTrue(Meaning.MeaninglyEquals(objA, objB, DataDescriptors.Semantic));
+                Assert.IsTrue(Meaning.MeaninglyEquals(objB, objA, DataDescriptors.Semantic));
+
+                Assert.IsFalse(Meaning.MeaninglyEquals(objA, objC, DataDescriptors.Semantic));
+                Assert.IsFalse(Meaning.MeaninglyEquals(objC, objA, DataDescriptors.Semantic));
+            }
         }
     }
 }
