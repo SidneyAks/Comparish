@@ -3,9 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.Emit;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Comparish
 {
@@ -20,9 +17,16 @@ namespace Comparish
         }
     }
 
-    public static class Meaning
+    static class Meaning
     {
         public static bool MeaninglyEquals<T1, T2>(T1 item1, T2 item2, object DataMeaning,
+            bool requireMatchingTypes = false, bool AllowVacuouslyComparison = false,
+            bool BSubSetsA = false)
+        {
+            return MeaninglyEquals(item1, item2, DataMeaning, requireMatchingTypes, AllowVacuouslyComparison, BSubSetsA);
+        }
+
+        public static bool MeaninglyEquals<T1, T2>(T1 item1, T2 item2, object DataMeaning, out List<Comparishon> propertyMatches,
             bool requireMatchingTypes = false, bool AllowVacuouslyComparison = false,
             bool BSubSetsA = false)
         {
@@ -41,6 +45,8 @@ namespace Comparish
 
             EnsureDataSetComparisonRequirement(item1, item2, DataMeaning, BSubSetsA);
 
+            propertyMatches = new List<Comparishon>();
+
             using (var enum1 = item1Props.GetEnumerator())
             using (var enum2 = item2Props.GetEnumerator())
             {
@@ -49,60 +55,11 @@ namespace Comparish
                     var v1 = enum1.Current.GetValue(item1);
                     var v2 = enum2.Current.GetValue(item2);
 
-                    if (v1?.Equals(v2) ?? v2 == null)
-                    {
-                        continue;
-                    }
-
-                    if (v1 is string || v2 is string)
-                    {
-                        return false;
-                    }
-
-                    if (v1 is IEnumerable l1 && v2 is IEnumerable l2)
-                    {
-                        if (ListLikeItemsAreEqual(l1, l2, DataMeaning))
-                        {
-                            continue;
-                        }
-                    } 
-                    else if (Meaning.MeaninglyEquals(v1, v2, DataMeaning))
-                    {
-                        continue;
-                    }
-
-
-                    return false;
+                    propertyMatches.Add(new Comparishon(v1, v2, DataMeaning, enum1.Current.Name));
                 }
             }
 
-            return true;
-        }
-
-        private static bool ListLikeItemsAreEqual(IEnumerable l1, IEnumerable l2, object meaning)
-        {
-            var enum1 = l1.GetEnumerator();
-            var enum2 = l2.GetEnumerator();
-            {
-                while (enum1.MoveNext() && enum2.MoveNext())
-                {
-                    var v1 = enum1.Current;
-                    var v2 = enum2.Current;
-
-                    if (v1?.Equals(v2) ?? v2 == null)
-                    {
-                        continue;
-                    }
-                    if (Meaning.MeaninglyEquals(v1, v2, meaning))
-                    {
-                        continue;
-                    }
-
-                    return false;
-
-                }
-            }
-            return true;
+            return propertyMatches.All(x => x.Matches);
         }
 
         private static void EnsureMatchingTypeRequirement<T1, T2>(T1 item1, T2 item2)
@@ -167,6 +124,118 @@ namespace Comparish
         public IncompatibleMeaningException(string message, Exception ex = null) : base(message, ex)
         {
 
+        }
+    }
+
+    public class Comparishon
+    {
+        public object v1 { get; }
+        public object v2 { get; }
+
+        public string FieldName { get; }
+        public object DataMeaning { get; }
+
+        public bool AllowPropertySubsetting { get; }
+
+        public List<Comparishon> ChildrenEvaluations {
+            get
+            {
+                if (_childrenEvaluations == null)
+                {
+                    var foo = Matches;
+                }
+                return _childrenEvaluations;
+            }
+        }
+        private List<Comparishon> _childrenEvaluations;
+
+        public Comparishon(object v1, object v2, object DataMeaning, string FieldName = null,
+            bool AllowPropertySubsetting = false)
+        {
+            this.FieldName = FieldName;
+            this.v1 = v1;
+            this.v2 = v2;
+            this.DataMeaning = DataMeaning;
+
+            this.AllowPropertySubsetting = AllowPropertySubsetting;
+        }
+
+        public bool Matches { 
+            get
+            {
+                try
+                {
+                    if (matches == null)
+                    {
+                        if (v1?.Equals(v2) ?? v2 == null)
+                        {
+                            return (matches = true).Value;
+                        }
+
+                        if (v1 is string || v2 is string)
+                        {
+                            return (matches = false).Value;
+                        }
+
+                        if (v1 is IEnumerable l1 && v2 is IEnumerable l2)
+                        {
+                            if (ListLikeItemsAreEqual(l1, l2, DataMeaning))
+                            {
+                                return (matches = true).Value;
+                            }
+                        }
+
+                        if (Meaning.MeaninglyEquals(v1, v2, DataMeaning, out _childrenEvaluations, BSubSetsA: AllowPropertySubsetting))
+                        {
+                            return (matches = true).Value;
+                        }
+
+                        return (matches = false).Value;
+                    }
+
+                    return matches.Value;
+                }
+                catch (Exception ex)
+                {
+                    this.ComparisonException = ex;
+                    return (matches = false).Value;
+                }
+
+            }
+        }
+        private bool? matches { get; set; }
+
+        private Exception ComparisonException { get; set; }
+
+        private static bool ListLikeItemsAreEqual(IEnumerable l1, IEnumerable l2, object meaning)
+        {
+            var enum1 = l1.GetEnumerator();
+            var enum2 = l2.GetEnumerator();
+            {
+                while (enum1.MoveNext() && enum2.MoveNext())
+                {
+                    var v1 = enum1.Current;
+                    var v2 = enum2.Current;
+
+                    if (v1?.Equals(v2) ?? v2 == null)
+                    {
+                        continue;
+                    }
+                    if (Meaning.MeaninglyEquals(v1, v2, meaning, out var _))
+                    {
+                        continue;
+                    }
+
+                    return false;
+
+                }
+            }
+            return true;
+        }
+
+        public static implicit operator bool(Comparishon c)
+        {
+            return c.Matches;
         }
     }
 }

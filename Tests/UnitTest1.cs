@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Comparish;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -57,8 +58,6 @@ namespace Tests
         public TestingObjectA[] list { get; set; }
     }
 
-
-
     [TestClass]
     public class UnitTest1
     {
@@ -82,12 +81,13 @@ namespace Tests
             };
 
             //Assert that Metadata fields (random guid values) are not equal
-            Assert.IsFalse(Meaning.MeaninglyEquals(objA, objB, DataDescriptors.Metadata));
-            Assert.IsFalse(Meaning.MeaninglyEquals(objB, objA, DataDescriptors.Metadata));
+            new Comparishon(objA, objB, DataDescriptors.Metadata);
+            Assert.IsFalse(new Comparishon(objA, objB, DataDescriptors.Metadata));
+            Assert.IsFalse(new Comparishon(objB, objA, DataDescriptors.Metadata));
 
             //Assert that SemanticData fields (specific values) are equal
-            Assert.IsTrue(Meaning.MeaninglyEquals(objA, objB, DataDescriptors.Semantic));
-            Assert.IsTrue(Meaning.MeaninglyEquals(objB, objA, DataDescriptors.Semantic));
+            Assert.IsTrue(new Comparishon(objA, objB, DataDescriptors.Semantic));
+            Assert.IsTrue(new Comparishon(objB, objA, DataDescriptors.Semantic));
         }
 
         [TestMethod]
@@ -110,75 +110,16 @@ namespace Tests
             };
 
             //Assert that Metadata fields (random guids vs null) are not equal
-            Assert.IsFalse(Meaning.MeaninglyEquals(objA, objB, DataDescriptors.Metadata));
-            Assert.IsFalse(Meaning.MeaninglyEquals(objB, objA, DataDescriptors.Metadata));
+            Assert.IsFalse((new Comparishon(objA, objB, DataDescriptors.Metadata)));
+            Assert.IsFalse((new Comparishon(objB, objA, DataDescriptors.Metadata)));
 
             //Assert that semantic data fields (specific values vs null) are not equal
-            Assert.IsFalse(Meaning.MeaninglyEquals(objA, objB, DataDescriptors.Semantic));
-            Assert.IsFalse(Meaning.MeaninglyEquals(objB, objA, DataDescriptors.Semantic));
+            Assert.IsFalse((new Comparishon(objA, objB, DataDescriptors.Semantic)));
+            Assert.IsFalse((new Comparishon(objB, objA, DataDescriptors.Semantic)));
 
             //Assert that null data tyupe fields (specific values) are equal
-            Assert.IsTrue(Meaning.MeaninglyEquals(objA, objB, null));
-            Assert.IsTrue(Meaning.MeaninglyEquals(objB, objA, null));
-        }
-
-        [TestMethod]
-        public void TestForTypeInferencingEquality()
-        {
-            var objA = new TestingObjectA
-            {
-                SemanticDataA = "Foo",
-                SemanticDataB = "Bar",
-                NullDataA = "Fooz",
-                NullDataB = "Barz",
-            };
-            var objB = new TestingObjectB
-            {
-                SemanticDataA = "Foo",
-                SemanticDataB = "Bar",
-            };
-            var objC = new TestingObjectC
-            {
-                SemanticDataA = "Foo"
-            };
-
-            //Assert that SemanticData fields (specific values) for compatible types are equal
-            Assert.IsTrue(Meaning.MeaninglyEquals(objA, objB, DataDescriptors.Semantic));
-            Assert.IsTrue(Meaning.MeaninglyEquals(objB, objA, DataDescriptors.Semantic));
-
-            //Assert that semantic data fields from incompatible types results in exception
-            Assert.ThrowsException<IncompatibleMeaningException>(() => Meaning.MeaninglyEquals(objA, objC, DataDescriptors.Semantic));
-            Assert.ThrowsException<IncompatibleMeaningException>(() => Meaning.MeaninglyEquals(objC, objA, DataDescriptors.Semantic));
-        }
-
-        [TestMethod]
-        public void TestForMatchingTypeRequirement()
-        {
-            var objA = new TestingObjectA
-            {
-                SemanticDataA = "Foo",
-                SemanticDataB = "Bar",
-                NullDataA = "Fooz",
-                NullDataB = "Barz",
-            };
-            var objB = new TestingObjectB
-            {
-                SemanticDataA = "Foo",
-                SemanticDataB = "Bar",
-            };
-            var objC = new TestingObjectC
-            {
-                SemanticDataA = "Foo"
-            };
-
-            //Assert that SemanticData fields (specific values) for compatible types are equal
-            Assert.IsTrue(Meaning.MeaninglyEquals(objA, objB, DataDescriptors.Semantic));
-            Assert.IsTrue(Meaning.MeaninglyEquals(objB, objA, DataDescriptors.Semantic));
-
-            //Assert that semantic data fields from incompatible types results in exception
-            Assert.ThrowsException<IncompatibleMeaningException>(() => Meaning.MeaninglyEquals(objA, objB, DataDescriptors.Semantic, requireMatchingTypes: true));
-            Assert.ThrowsException<IncompatibleMeaningException>(() => Meaning.MeaninglyEquals(objB, objA, DataDescriptors.Semantic, requireMatchingTypes: true));
-
+            Assert.IsTrue((new Comparishon(objA, objB, null)));
+            Assert.IsTrue((new Comparishon(objB, objA, null)));
         }
 
         [TestMethod]
@@ -202,34 +143,13 @@ namespace Tests
             };
 
             //Assert that SemanticData fields (specific values) for compatible types are equal
-            Assert.IsTrue(Meaning.MeaninglyEquals(objA, objB, DataDescriptors.Semantic));
-            Assert.IsTrue(Meaning.MeaninglyEquals(objB, objA, DataDescriptors.Semantic));
+            Assert.IsTrue(new Comparishon(objA, objB, DataDescriptors.Semantic));
+            Assert.IsTrue(new Comparishon(objB, objA, DataDescriptors.Semantic));
 
             //Assert that semantic data fields allow subsetting, but not supersetting
-            Assert.IsTrue(Meaning.MeaninglyEquals(objA, objC, DataDescriptors.Semantic, BSubSetsA: true));
-            Assert.ThrowsException<IncompatibleMeaningException>(() => Meaning.MeaninglyEquals(objC, objA, DataDescriptors.Semantic, BSubSetsA: true));
+            Assert.IsTrue(new Comparishon(objA, objC, DataDescriptors.Semantic, AllowPropertySubsetting: true));
+            Assert.IsFalse(new Comparishon(objC, objA, DataDescriptors.Semantic, AllowPropertySubsetting: true));
 
-        }
-
-        [TestMethod]
-        public void TestForVacuousComparison()
-        {
-            var objA = new TestingObjectA
-            {
-                MetadataA = Guid.NewGuid().ToString(),
-                MetadataB = Guid.NewGuid().ToString(),
-                SemanticDataA = "Foo",
-                SemanticDataB = "Bar",
-                NullDataA = "Fooz",
-                NullDataB = "Barz",
-            };
-
-            //Assert that vacuous comparison is equal when allowed
-            Assert.IsTrue(Meaning.MeaninglyEquals(objA, objA, "foo", AllowVacuouslyComparison: true));
-            Assert.IsTrue(Meaning.MeaninglyEquals(objA, objA, "foo", AllowVacuouslyComparison: true));
-
-            //Assert that vacuous comparison throws exception when not allowed
-            Assert.ThrowsException<IncompatibleMeaningException>(() => Meaning.MeaninglyEquals(objA, objA, "foo"));
         }
 
         [TestMethod]
@@ -283,16 +203,56 @@ namespace Tests
                 };
 
                 //Assert that Metadata fields (random guid values) are not equal
-                Assert.IsFalse(Meaning.MeaninglyEquals(objA, objB, DataDescriptors.Metadata));
-                Assert.IsFalse(Meaning.MeaninglyEquals(objB, objA, DataDescriptors.Metadata));
+                Assert.IsFalse(new Comparishon(objA, objB, DataDescriptors.Metadata));
+                Assert.IsFalse(new Comparishon(objB, objA, DataDescriptors.Metadata));
 
                 //Assert that SemanticData fields (specific values) are equal
-                Assert.IsTrue(Meaning.MeaninglyEquals(objA, objB, DataDescriptors.Semantic));
-                Assert.IsTrue(Meaning.MeaninglyEquals(objB, objA, DataDescriptors.Semantic));
+                Assert.IsTrue(new Comparishon(objA, objB, DataDescriptors.Semantic));
+                Assert.IsTrue(new Comparishon(objB, objA, DataDescriptors.Semantic));
 
-                Assert.IsFalse(Meaning.MeaninglyEquals(objA, objC, DataDescriptors.Semantic));
-                Assert.IsFalse(Meaning.MeaninglyEquals(objC, objA, DataDescriptors.Semantic));
+                Assert.IsFalse(new Comparishon(objA, objC, DataDescriptors.Semantic));
+                Assert.IsFalse(new Comparishon(objC, objA, DataDescriptors.Semantic));
             }
+        }
+
+        [TestMethod]
+        public void TestForAccurateDataSummarizationOutput()
+        {
+            var objA = new TestingObjectA
+            {
+                MetadataA = Guid.NewGuid().ToString(),
+                MetadataB = Guid.NewGuid().ToString(),
+                SemanticDataA = "Foo",
+                SemanticDataB = "Bar",
+            };
+
+            var objB = new TestingObjectA
+            {
+                MetadataA = Guid.NewGuid().ToString(),
+                MetadataB = Guid.NewGuid().ToString(),
+                SemanticDataA = "Foo",
+                SemanticDataB = "Bar",
+            };
+
+            //Assert that Metadata fields (random guid values) are not equal
+            var ABMetadata = new Comparishon(objA, objB, DataDescriptors.Metadata);
+            var BAMetadata = new Comparishon(objB, objA, DataDescriptors.Metadata);
+            Assert.IsFalse(ABMetadata);
+            Assert.IsFalse(ABMetadata.ChildrenEvaluations.First(x => x.FieldName == "MetadataA").Matches);
+            Assert.IsFalse(ABMetadata.ChildrenEvaluations.First(x => x.FieldName == "MetadataB").Matches);
+            Assert.IsFalse(BAMetadata);
+            Assert.IsFalse(BAMetadata.ChildrenEvaluations.First(x => x.FieldName == "MetadataA").Matches);
+            Assert.IsFalse(BAMetadata.ChildrenEvaluations.First(x => x.FieldName == "MetadataB").Matches);
+
+            //Assert that SemanticData fields (specific values) are equal
+            var ABSemantic = new Comparishon(objA, objB, DataDescriptors.Semantic);
+            var BASemantic = new Comparishon(objB, objA, DataDescriptors.Semantic);
+            Assert.IsTrue(ABSemantic);
+            Assert.IsTrue(ABSemantic.ChildrenEvaluations.First(x => x.FieldName == "SemanticDataA").Matches);
+            Assert.IsTrue(ABSemantic.ChildrenEvaluations.First(x => x.FieldName == "SemanticDataB").Matches); 
+            Assert.IsTrue(BASemantic);
+            Assert.IsTrue(BASemantic.ChildrenEvaluations.First(x => x.FieldName == "SemanticDataA").Matches);
+            Assert.IsTrue(BASemantic.ChildrenEvaluations.First(x => x.FieldName == "SemanticDataB").Matches);
         }
     }
 }
