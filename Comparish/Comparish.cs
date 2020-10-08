@@ -185,7 +185,7 @@ namespace Comparish
                         {
                             return (matches = true).Value;
                         }
-
+                        LowLevelNoMatch = true;
                         return (matches = false).Value;
                     }
 
