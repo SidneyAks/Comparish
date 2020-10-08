@@ -93,12 +93,12 @@ namespace Tests
 
             //Assert that Metadata fields (random guid values) are not equal
             new Comparishon(objA, objB, DataDescriptors.Metadata);
-            Assert.IsFalse(new Comparishon(objA, objB, DataDescriptors.Metadata));
-            Assert.IsFalse(new Comparishon(objB, objA, DataDescriptors.Metadata));
+            Assert.IsFalse(new Comparishon(objA, objB, DataDescriptors.Metadata).Matches);
+            Assert.IsFalse(new Comparishon(objB, objA, DataDescriptors.Metadata).Matches);
 
             //Assert that SemanticData fields (specific values) are equal
-            Assert.IsTrue(new Comparishon(objA, objB, DataDescriptors.Semantic));
-            Assert.IsTrue(new Comparishon(objB, objA, DataDescriptors.Semantic));
+            Assert.IsTrue(new Comparishon(objA, objB, DataDescriptors.Semantic).Matches);
+            Assert.IsTrue(new Comparishon(objB, objA, DataDescriptors.Semantic).Matches);
         }
 
         [TestMethod]
@@ -121,16 +121,16 @@ namespace Tests
             };
 
             //Assert that Metadata fields (random guids vs null) are not equal
-            Assert.IsFalse((new Comparishon(objA, objB, DataDescriptors.Metadata)));
-            Assert.IsFalse((new Comparishon(objB, objA, DataDescriptors.Metadata)));
+            Assert.IsFalse(new Comparishon(objA, objB, DataDescriptors.Metadata).Matches);
+            Assert.IsFalse(new Comparishon(objB, objA, DataDescriptors.Metadata).Matches);
 
             //Assert that semantic data fields (specific values vs null) are not equal
-            Assert.IsFalse((new Comparishon(objA, objB, DataDescriptors.Semantic)));
-            Assert.IsFalse((new Comparishon(objB, objA, DataDescriptors.Semantic)));
+            Assert.IsFalse(new Comparishon(objA, objB, DataDescriptors.Semantic).Matches);
+            Assert.IsFalse(new Comparishon(objB, objA, DataDescriptors.Semantic).Matches);
 
             //Assert that null data tyupe fields (specific values) are equal
-            Assert.IsTrue((new Comparishon(objA, objB, null)));
-            Assert.IsTrue((new Comparishon(objB, objA, null)));
+            Assert.IsTrue(new Comparishon(objA, objB, null).Matches);
+            Assert.IsTrue(new Comparishon(objB, objA, null).Matches);
         }
 
         [TestMethod]
@@ -154,12 +154,12 @@ namespace Tests
             };
 
             //Assert that SemanticData fields (specific values) for compatible types are equal
-            Assert.IsTrue(new Comparishon(objA, objB, DataDescriptors.Semantic));
-            Assert.IsTrue(new Comparishon(objB, objA, DataDescriptors.Semantic));
+            Assert.IsTrue(new Comparishon(objA, objB, DataDescriptors.Semantic).Matches);
+            Assert.IsTrue(new Comparishon(objB, objA, DataDescriptors.Semantic).Matches);
 
             //Assert that semantic data fields allow subsetting, but not supersetting
-            Assert.IsTrue(new Comparishon(objA, objC, DataDescriptors.Semantic, AllowPropertySubsetting: true));
-            Assert.IsFalse(new Comparishon(objC, objA, DataDescriptors.Semantic, AllowPropertySubsetting: true));
+            Assert.IsTrue(new Comparishon(objA, objC, DataDescriptors.Semantic, AllowPropertySubsetting: true).Matches);
+            Assert.IsFalse(new Comparishon(objC, objA, DataDescriptors.Semantic, AllowPropertySubsetting: true).Matches);
 
         }
 
@@ -214,15 +214,15 @@ namespace Tests
                 };
 
                 //Assert that Metadata fields (random guid values) are not equal
-                Assert.IsFalse(new Comparishon(objA, objB, DataDescriptors.Metadata));
-                Assert.IsFalse(new Comparishon(objB, objA, DataDescriptors.Metadata));
+                Assert.IsFalse(new Comparishon(objA, objB, DataDescriptors.Metadata).Matches);
+                Assert.IsFalse(new Comparishon(objB, objA, DataDescriptors.Metadata).Matches);
 
                 //Assert that SemanticData fields (specific values) are equal
-                Assert.IsTrue(new Comparishon(objA, objB, DataDescriptors.Semantic));
-                Assert.IsTrue(new Comparishon(objB, objA, DataDescriptors.Semantic));
+                Assert.IsTrue(new Comparishon(objA, objB, DataDescriptors.Semantic).Matches);
+                Assert.IsTrue(new Comparishon(objB, objA, DataDescriptors.Semantic).Matches);
 
-                Assert.IsFalse(new Comparishon(objA, objC, DataDescriptors.Semantic));
-                Assert.IsFalse(new Comparishon(objC, objA, DataDescriptors.Semantic));
+                Assert.IsFalse(new Comparishon(objA, objC, DataDescriptors.Semantic).Matches);
+                Assert.IsFalse(new Comparishon(objC, objA, DataDescriptors.Semantic).Matches);
             }
         }
 
@@ -248,20 +248,20 @@ namespace Tests
             //Assert that Metadata fields (random guid values) are not equal
             var ABMetadata = new Comparishon(objA, objB, DataDescriptors.Metadata);
             var BAMetadata = new Comparishon(objB, objA, DataDescriptors.Metadata);
-            Assert.IsFalse(ABMetadata);
+            Assert.IsFalse(ABMetadata.Matches);
             Assert.IsTrue(ABMetadata.ChildrenEvaluations["MetadataA"].Matches);
             Assert.IsFalse(ABMetadata.ChildrenEvaluations["MetadataB"].Matches);
-            Assert.IsFalse(BAMetadata);
+            Assert.IsFalse(BAMetadata.Matches);
             Assert.IsTrue(BAMetadata.ChildrenEvaluations["MetadataA"].Matches);
             Assert.IsFalse(BAMetadata.ChildrenEvaluations["MetadataB"].Matches);
 
             //Assert that SemanticData fields (specific values) are equal
             var ABSemantic = new Comparishon(objA, objB, DataDescriptors.Semantic);
             var BASemantic = new Comparishon(objB, objA, DataDescriptors.Semantic);
-            Assert.IsTrue(ABSemantic);
+            Assert.IsTrue(ABSemantic.Matches);
             Assert.IsTrue(ABSemantic.ChildrenEvaluations["SemanticDataA"].Matches);
             Assert.IsTrue(ABSemantic.ChildrenEvaluations["SemanticDataB"].Matches); 
-            Assert.IsTrue(BASemantic);
+            Assert.IsTrue(BASemantic.Matches);
             Assert.IsTrue(BASemantic.ChildrenEvaluations["SemanticDataA"].Matches);
             Assert.IsTrue(BASemantic.ChildrenEvaluations["SemanticDataB"].Matches);
         }

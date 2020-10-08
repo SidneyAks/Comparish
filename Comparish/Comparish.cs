@@ -133,24 +133,38 @@ namespace Comparish
     [JsonConverter(typeof(DirectPropertySerializer))]
     public class Comparishon
     {
+        #region Serialization And Display settings
         [Flags]
-        public enum SummaryOutputDisplays
+        public enum SummaryOutputDisplayMethods
         {
             OnlyMismatch = 0
-            
         }
 
-        public string JsonSummarization(SummaryOutputDisplays OutputDisplay = SummaryOutputDisplays.OnlyMismatch, bool IndentOutput = true)
+        public string JsonSummarization(SummaryOutputDisplayMethods OutputDisplay = SummaryOutputDisplayMethods.OnlyMismatch, bool IndentOutput = true)
         {
             switch (OutputDisplay)
             {
-                case SummaryOutputDisplays.OnlyMismatch:
+                case SummaryOutputDisplayMethods.OnlyMismatch:
                     return JsonConvert.SerializeObject(this, IndentOutput ? Formatting.Indented : Formatting.None);
             }
             throw new Exception("How the hell did you even get here?");
         }
 
         private string DebuggerDisplay => $"{FieldName}{MatchStatement}";
+
+        private string MatchStatement => $"{(Matches ? "Match" : $"No Match : {{{v1},{v2}}}")}";
+
+        internal object Serialization
+        {
+            get
+            {
+                if (Matches) return "Matches";
+                if (LowLevelNoMatch) return $"No Match : {{{v1},{v2}}}";
+                if (!LowLevelNoMatch) return (object)ChildrenEvaluations ?? MatchStatement;
+                return "I really don't know what happened here, this should be an impossible state. Please file a bug";
+            }
+        }
+        #endregion
 
         public bool Matches
         {
@@ -185,7 +199,6 @@ namespace Comparish
                         {
                             return (matches = true).Value;
                         }
-                        LowLevelNoMatch = true;
                         return (matches = false).Value;
                     }
 
@@ -193,6 +206,7 @@ namespace Comparish
                 }
                 catch (Exception ex)
                 {
+                    LowLevelNoMatch = true;
                     this.ComparisonException = ex;
                     return (matches = false).Value;
                 }
@@ -204,18 +218,7 @@ namespace Comparish
         public object v1 { get; }
         public object v2 { get; }
 
-        private string MatchStatement => $"{(Matches ? "Match" : $"No Match : {{{v1},{v2}}}")}";
 
-        internal object Serialization
-        {
-            get
-            {
-                if (Matches) return "Matches";
-                if (!LowLevelNoMatch) return ChildrenEvaluations;
-                if (LowLevelNoMatch) return $"No Match : {{{v1},{v2}}}";
-                return "I really don't know what happened here, this should be an impossible state. Please file a bug";
-            }
-        }
 
         public string FieldName { get; }
         public object DataMeaning { get; }
@@ -253,6 +256,12 @@ namespace Comparish
             return Matches;
         }
 
+        public bool GetMatchDetailsJson(out string Json, SummaryOutputDisplayMethods OutputDisplay = SummaryOutputDisplayMethods.OnlyMismatch, bool IndentOutput = true)
+        {
+            Json = JsonSummarization(OutputDisplay, IndentOutput);
+            return Matches;
+        }
+
         private bool LowLevelNoMatch;
 
         private Exception ComparisonException { get; set; }
@@ -281,11 +290,6 @@ namespace Comparish
                 }
             }
             return true;
-        }
-
-        public static implicit operator bool(Comparishon c)
-        {
-            return c.Matches;
         }
     }
 
