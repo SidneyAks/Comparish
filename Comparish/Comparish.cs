@@ -1,6 +1,8 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 
@@ -26,7 +28,7 @@ namespace Comparish
             return MeaninglyEquals(item1, item2, DataMeaning, requireMatchingTypes, AllowVacuouslyComparison, BSubSetsA);
         }
 
-        public static bool MeaninglyEquals<T1, T2>(T1 item1, T2 item2, object DataMeaning, out List<Comparishon> propertyMatches,
+        public static bool MeaninglyEquals<T1, T2>(T1 item1, T2 item2, object DataMeaning, out Dictionary<string,Comparishon> propertyMatches,
             bool requireMatchingTypes = false, bool AllowVacuouslyComparison = false,
             bool BSubSetsA = false)
         {
@@ -45,7 +47,7 @@ namespace Comparish
 
             EnsureDataSetComparisonRequirement(item1, item2, DataMeaning, BSubSetsA);
 
-            propertyMatches = new List<Comparishon>();
+            propertyMatches = new Dictionary<string, Comparishon>();
 
             using (var enum1 = item1Props.GetEnumerator())
             using (var enum2 = item2Props.GetEnumerator())
@@ -55,11 +57,11 @@ namespace Comparish
                     var v1 = enum1.Current.GetValue(item1);
                     var v2 = enum2.Current.GetValue(item2);
 
-                    propertyMatches.Add(new Comparishon(v1, v2, DataMeaning, enum1.Current.Name));
+                    propertyMatches[enum1.Current.Name] = new Comparishon(v1, v2, DataMeaning, enum1.Current.Name);
                 }
             }
 
-            return propertyMatches.All(x => x.Matches);
+            return propertyMatches.Values.All(x => x.Matches);
         }
 
         private static void EnsureMatchingTypeRequirement<T1, T2>(T1 item1, T2 item2)
@@ -127,46 +129,39 @@ namespace Comparish
         }
     }
 
+    [DebuggerDisplay("{DebuggerDisplay}")]
+    [JsonConverter(typeof(DirectPropertySerializer))]
     public class Comparishon
     {
-        public object v1 { get; }
-        public object v2 { get; }
-
-        public string FieldName { get; }
-        public object DataMeaning { get; }
-
-        public bool AllowPropertySubsetting { get; }
-
-        public List<Comparishon> ChildrenEvaluations {
-            get
-            {
-                if (_childrenEvaluations == null)
-                {
-                    var foo = Matches;
-                }
-                return _childrenEvaluations;
-            }
-        }
-        private List<Comparishon> _childrenEvaluations;
-
-        public Comparishon(object v1, object v2, object DataMeaning, string FieldName = null,
-            bool AllowPropertySubsetting = false)
+        [Flags]
+        public enum SummaryOutputDisplays
         {
-            this.FieldName = FieldName;
-            this.v1 = v1;
-            this.v2 = v2;
-            this.DataMeaning = DataMeaning;
-
-            this.AllowPropertySubsetting = AllowPropertySubsetting;
+            OnlyMismatch = 0
+            
         }
 
-        public bool Matches { 
+        public string JsonSummarization(SummaryOutputDisplays OutputDisplay = SummaryOutputDisplays.OnlyMismatch, bool IndentOutput = true)
+        {
+            switch (OutputDisplay)
+            {
+                case SummaryOutputDisplays.OnlyMismatch:
+                    return JsonConvert.SerializeObject(this, IndentOutput ? Formatting.Indented : Formatting.None);
+            }
+            throw new Exception("How the hell did you even get here?");
+        }
+
+        private string DebuggerDisplay => $"{FieldName}{MatchStatement}";
+
+        public bool Matches
+        {
             get
             {
                 try
                 {
                     if (matches == null)
                     {
+
+                        LowLevelNoMatch = true;
                         if (v1?.Equals(v2) ?? v2 == null)
                         {
                             return (matches = true).Value;
@@ -185,6 +180,7 @@ namespace Comparish
                             }
                         }
 
+                        LowLevelNoMatch = false;
                         if (Meaning.MeaninglyEquals(v1, v2, DataMeaning, out _childrenEvaluations, BSubSetsA: AllowPropertySubsetting))
                         {
                             return (matches = true).Value;
@@ -204,6 +200,60 @@ namespace Comparish
             }
         }
         private bool? matches { get; set; }
+
+        public object v1 { get; }
+        public object v2 { get; }
+
+        private string MatchStatement => $"{(Matches ? "Match" : $"No Match : {{{v1},{v2}}}")}";
+
+        internal object Serialization
+        {
+            get
+            {
+                if (Matches) return "Matches";
+                if (!LowLevelNoMatch) return ChildrenEvaluations;
+                if (LowLevelNoMatch) return $"No Match : {{{v1},{v2}}}";
+                return "I really don't know what happened here, this should be an impossible state. Please file a bug";
+            }
+        }
+
+        public string FieldName { get; }
+        public object DataMeaning { get; }
+
+        public bool AllowPropertySubsetting { get; }
+
+        public Dictionary<string, Comparishon> ChildrenEvaluations {
+            get
+            {
+                if (_childrenEvaluations == null)
+                {
+                    var foo = Matches;
+                }
+                return _childrenEvaluations;
+            }
+        }
+        private Dictionary<string, Comparishon> _childrenEvaluations;
+
+
+        public Comparishon(object v1, object v2, object DataMeaning, string FieldName = null,
+            bool AllowPropertySubsetting = false)
+        {
+            this.FieldName = FieldName;
+            this.v1 = v1;
+            this.v2 = v2;
+            this.DataMeaning = DataMeaning;
+
+            this.AllowPropertySubsetting = AllowPropertySubsetting;
+        }
+
+
+        public bool GetMatchDetails(out Dictionary<string, Comparishon> Evaluations)
+        {
+            Evaluations = ChildrenEvaluations;
+            return Matches;
+        }
+
+        private bool LowLevelNoMatch;
 
         private Exception ComparisonException { get; set; }
 
@@ -236,6 +286,25 @@ namespace Comparish
         public static implicit operator bool(Comparishon c)
         {
             return c.Matches;
+        }
+    }
+
+    public class DirectPropertySerializer : JsonConverter
+    {
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {
+            var name = value as Comparishon;
+            serializer.Serialize(writer, name.Serialization);
+        }
+
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override bool CanConvert(Type objectType)
+        {
+            return true;
         }
     }
 }

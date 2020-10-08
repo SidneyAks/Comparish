@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Comparish;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json;
 
 namespace Tests
 {
@@ -10,6 +11,16 @@ namespace Tests
     {
         Metadata,
         Semantic
+    }
+
+    public class ResursiveObject
+    {
+        [DataDescriptor(DataDescriptors.Metadata)]
+        public string ValueA { get; set; }
+        [DataDescriptor(DataDescriptors.Metadata)]
+        public string ValueB { get; set; }
+        [DataDescriptor(DataDescriptors.Metadata)]
+        public ResursiveObject r { get; set; }
     }
 
 
@@ -228,7 +239,7 @@ namespace Tests
 
             var objB = new TestingObjectA
             {
-                MetadataA = Guid.NewGuid().ToString(),
+                MetadataA = objA.MetadataA,
                 MetadataB = Guid.NewGuid().ToString(),
                 SemanticDataA = "Foo",
                 SemanticDataB = "Bar",
@@ -238,21 +249,62 @@ namespace Tests
             var ABMetadata = new Comparishon(objA, objB, DataDescriptors.Metadata);
             var BAMetadata = new Comparishon(objB, objA, DataDescriptors.Metadata);
             Assert.IsFalse(ABMetadata);
-            Assert.IsFalse(ABMetadata.ChildrenEvaluations.First(x => x.FieldName == "MetadataA").Matches);
-            Assert.IsFalse(ABMetadata.ChildrenEvaluations.First(x => x.FieldName == "MetadataB").Matches);
+            Assert.IsTrue(ABMetadata.ChildrenEvaluations["MetadataA"].Matches);
+            Assert.IsFalse(ABMetadata.ChildrenEvaluations["MetadataB"].Matches);
             Assert.IsFalse(BAMetadata);
-            Assert.IsFalse(BAMetadata.ChildrenEvaluations.First(x => x.FieldName == "MetadataA").Matches);
-            Assert.IsFalse(BAMetadata.ChildrenEvaluations.First(x => x.FieldName == "MetadataB").Matches);
+            Assert.IsTrue(BAMetadata.ChildrenEvaluations["MetadataA"].Matches);
+            Assert.IsFalse(BAMetadata.ChildrenEvaluations["MetadataB"].Matches);
 
             //Assert that SemanticData fields (specific values) are equal
             var ABSemantic = new Comparishon(objA, objB, DataDescriptors.Semantic);
             var BASemantic = new Comparishon(objB, objA, DataDescriptors.Semantic);
             Assert.IsTrue(ABSemantic);
-            Assert.IsTrue(ABSemantic.ChildrenEvaluations.First(x => x.FieldName == "SemanticDataA").Matches);
-            Assert.IsTrue(ABSemantic.ChildrenEvaluations.First(x => x.FieldName == "SemanticDataB").Matches); 
+            Assert.IsTrue(ABSemantic.ChildrenEvaluations["SemanticDataA"].Matches);
+            Assert.IsTrue(ABSemantic.ChildrenEvaluations["SemanticDataB"].Matches); 
             Assert.IsTrue(BASemantic);
-            Assert.IsTrue(BASemantic.ChildrenEvaluations.First(x => x.FieldName == "SemanticDataA").Matches);
-            Assert.IsTrue(BASemantic.ChildrenEvaluations.First(x => x.FieldName == "SemanticDataB").Matches);
+            Assert.IsTrue(BASemantic.ChildrenEvaluations["SemanticDataA"].Matches);
+            Assert.IsTrue(BASemantic.ChildrenEvaluations["SemanticDataB"].Matches);
+        }
+
+        [TestMethod]
+        public void RunComplexObjectComparision()
+        {
+            var objA = new ResursiveObject()
+            {
+                ValueA = "Foo",
+                ValueB = "Bar",
+                r = new ResursiveObject()
+                {
+                    ValueA = "Baz",
+                    ValueB = "Buz",
+                    r = new ResursiveObject()
+                    {
+                        ValueA = "Quix"
+                    }
+                }
+            };
+
+            var objB = new ResursiveObject()
+            {
+                ValueA = "Foo",
+                ValueB = "Bar",
+                r = new ResursiveObject()
+                {
+                    ValueA = "Baz",
+                    ValueB = "Buz",
+                    r = new ResursiveObject()
+                    {
+                        ValueA = "Quax"
+                    }
+                }
+            };
+
+            var ABMetadata = new Comparishon(objA, objB, DataDescriptors.Metadata);
+
+            var JsonSummary = ABMetadata.JsonSummarization(IndentOutput: false);
+            var ExpectedSummary = "{\"r\":{\"r\":{\"r\":\"Matches\",\"ValueA\":\"No Match : {Quix,Quax}\",\"ValueB\":\"Matches\"},\"ValueA\":\"Matches\",\"ValueB\":\"Matches\"},\"ValueA\":\"Matches\",\"ValueB\":\"Matches\"}";
+
+            Assert.AreEqual(ExpectedSummary, JsonSummary);
         }
     }
 }
